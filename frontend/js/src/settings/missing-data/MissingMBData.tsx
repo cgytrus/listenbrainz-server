@@ -9,6 +9,7 @@ import { Helmet } from "react-helmet";
 
 import NiceModal from "@ebay/nice-modal-react";
 
+import { chain, forEach, groupBy } from "lodash";
 import BrainzPlayer from "../../common/brainzplayer/BrainzPlayer";
 import Loader from "../../components/Loader";
 import ListenCard from "../../common/listens/ListenCard";
@@ -21,6 +22,7 @@ import {
   getRecordingMSID,
   getTrackName,
 } from "../../utils/utils";
+import Accordion from "../../common/Accordion";
 
 export type MissingMBDataProps = {
   missingData?: Array<MissingMBData>;
@@ -212,6 +214,8 @@ export default class MissingMBDataPage extends React.Component<
     const { user } = this.props;
     const { APIService, currentUser } = this.context;
     const isCurrentUser = user.name === currentUser?.name;
+    const groupedMissingData = groupBy(missingData, "release_name");
+
     const missingMBDataAsListen = missingData.map((data) => {
       return {
         listened_at: new Date(data.listened_at).getTime() / 1000,
@@ -263,82 +267,109 @@ export default class MissingMBDataPage extends React.Component<
                 >
                   <Loader isLoading={loading} />
                 </div>
-                {missingData.map((data, index) => {
-                  if (
-                    deletedListens.find(
-                      (deletedMSID) => deletedMSID === data.recording_msid
-                    )
-                  ) {
-                    // If the item was deleted, don't show it to the user
-                    return null;
+                {Object.entries(groupedMissingData).map(
+                  ([releaseName, group]) => {
+                    const multiTrackMappingButton = (
+                      <button
+                        type="button"
+                        onClick={() => {
+                        }}
+                        data-toggle="modal"
+                        data-target="#MultiTrackMBIDMappingModal"
+                      >
+                        Link listens for this release
+                      </button>
+                    );
+                    return (
+                      <Accordion
+                        title={
+                          <>
+                            {releaseName} {multiTrackMappingButton}
+                          </>
+                        }
+                      >
+                        {group.map((data, index) => {
+                          if (
+                            deletedListens.find(
+                              (deletedMSID) =>
+                                deletedMSID === data.recording_msid
+                            )
+                          ) {
+                            // If the item was deleted, don't show it to the user
+                            return undefined;
+                          }
+                          let additionalActions;
+                          const listen = missingMBDataAsListen[index];
+                          const additionalMenuItems = [];
+                          if (currentUser?.auth_token) {
+                            // Commenting this out for now because currently it leads to new eager users creating
+                            // a bunch of standalone recordings, and possible duplicates
+                            /* const addToMB = (
+                              <ListenControl
+                                buttonClassName="btn btn-sm"
+                                icon={faPlus}
+                                title="Add missing recording"
+                                text=""
+                                // eslint-disable-next-line react/jsx-no-bind
+                                action={this.submitMissingData.bind(this, listen)}
+                              />
+                            ); */
+
+                            const recordingMSID = getRecordingMSID(listen);
+                            const canDelete =
+                              isCurrentUser &&
+                              Boolean(listen.listened_at) &&
+                              Boolean(recordingMSID);
+
+                            if (canDelete) {
+                              additionalMenuItems.push(
+                                <ListenControl
+                                  text="Delete Listen"
+                                  icon={faTrashAlt}
+                                  action={this.deleteListen.bind(this, data)}
+                                />
+                              );
+                            }
+
+                            if (
+                              listen?.track_metadata?.additional_info
+                                ?.recording_msid
+                            ) {
+                              const linkWithMB = (
+                                <ListenControl
+                                  buttonClassName="btn btn-sm btn-success"
+                                  text=""
+                                  title="Link with MusicBrainz"
+                                  icon={faLink}
+                                  action={() => {
+                                    NiceModal.show(MBIDMappingModal, {
+                                      listenToMap: listen,
+                                    });
+                                  }}
+                                />
+                              );
+                              additionalActions = linkWithMB;
+                            }
+                          }
+                          return (
+                            <ListenCard
+                              key={`${data.recording_name}-${data.artist_name}-${data.listened_at}`}
+                              showTimestamp
+                              showUsername={false}
+                              // eslint-disable-next-line react/jsx-no-useless-fragment
+                              customThumbnail={<></>}
+                              // eslint-disable-next-line react/jsx-no-useless-fragment
+                              feedbackComponent={<></>}
+                              listen={missingMBDataAsListen[index]}
+                              additionalMenuItems={additionalMenuItems}
+                              additionalActions={additionalActions}
+                            />
+                          );
+                        })}
+                      </Accordion>
+                    );
                   }
-                  let additionalActions;
-                  const listen = missingMBDataAsListen[index];
-                  const additionalMenuItems = [];
-                  if (currentUser?.auth_token) {
-                    // Commenting this out for now because currently it leads to new eager users creating
-                    // a bunch of standalone recordings, and possible duplicates
-                    /* const addToMB = (
-                    <ListenControl
-                      buttonClassName="btn btn-sm"
-                      icon={faPlus}
-                      title="Add missing recording"
-                      text=""
-                      // eslint-disable-next-line react/jsx-no-bind
-                      action={this.submitMissingData.bind(this, listen)}
-                    />
-                  ); */
-
-                    const recordingMSID = getRecordingMSID(listen);
-                    const canDelete =
-                      isCurrentUser &&
-                      Boolean(listen.listened_at) &&
-                      Boolean(recordingMSID);
-
-                    if (canDelete) {
-                      additionalMenuItems.push(
-                        <ListenControl
-                          text="Delete Listen"
-                          icon={faTrashAlt}
-                          action={this.deleteListen.bind(this, data)}
-                        />
-                      );
-                    }
-
-                    if (
-                      listen?.track_metadata?.additional_info?.recording_msid
-                    ) {
-                      const linkWithMB = (
-                        <ListenControl
-                          buttonClassName="btn btn-sm btn-success"
-                          text=""
-                          title="Link with MusicBrainz"
-                          icon={faLink}
-                          action={() => {
-                            NiceModal.show(MBIDMappingModal, {
-                              listenToMap: listen,
-                            });
-                          }}
-                        />
-                      );
-                      additionalActions = linkWithMB;
-                    }
-                  }
-                  return (
-                    <ListenCard
-                      key={`${data.recording_name}-${data.artist_name}-${data.listened_at}`}
-                      showTimestamp
-                      showUsername={false}
-                      // eslint-disable-next-line react/jsx-no-useless-fragment
-                      customThumbnail={<></>}
-                      // eslint-disable-next-line react/jsx-no-useless-fragment
-                      feedbackComponent={<></>}
-                      listen={missingMBDataAsListen[index]}
-                      additionalMenuItems={additionalMenuItems}
-                      additionalActions={additionalActions}
-                    />
-                  );
-                })}
+                )}
               </div>
               <ul className="pager" style={{ display: "flex" }}>
                 <li
