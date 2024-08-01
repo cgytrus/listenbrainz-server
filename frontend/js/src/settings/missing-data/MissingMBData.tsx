@@ -22,6 +22,7 @@ import {
   getRecordingMSID,
   getTrackName,
 } from "../../utils/utils";
+import MultiTrackMBIDMappingModal from "../../common/listens/MultiTrackMBIDMappingModal";
 import Accordion from "../../common/Accordion";
 
 export type MissingMBDataProps = {
@@ -273,6 +274,10 @@ export default class MissingMBDataPage extends React.Component<
                       <button
                         type="button"
                         onClick={() => {
+                          NiceModal.show(MultiTrackMBIDMappingModal, {
+                            missingData: group,
+                            releaseName,
+                          });
                         }}
                         data-toggle="modal"
                         data-target="#MultiTrackMBIDMappingModal"
