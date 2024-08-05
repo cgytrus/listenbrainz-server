@@ -390,6 +390,7 @@ export default class MissingMBDataPage extends React.Component<
                         {multiTrackMappingButton} {releaseName}
                       </>
                     }
+                    defaultOpen={group.length === 1}
                   >
                     {listenCards}
                   </Accordion>
