@@ -300,8 +300,10 @@ export default class MissingMBDataPage extends React.Component<
                 const multiTrackMappingButton = (
                   <button
                     className="btn btn-sm btn-primary"
+                    style={{ padding: "5px" }}
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       NiceModal.show(MultiTrackMBIDMappingModal, {
                         missingData: group,
                         releaseName,
@@ -385,7 +387,7 @@ export default class MissingMBDataPage extends React.Component<
                   <Accordion
                     title={
                       <>
-                        {releaseName} {multiTrackMappingButton}
+                        {multiTrackMappingButton} {releaseName}
                       </>
                     }
                   >
